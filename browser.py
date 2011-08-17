@@ -45,7 +45,9 @@ class Browser:
         gtk.main_quit()
 
     def __init__(self):
-        gobject.threads_init()
+
+        
+        #gobject.threads_init()
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_resizable(True)
         self.window.set_title("Pygmy Web")
@@ -60,13 +62,13 @@ class Browser:
         self.t.daemon = True
         self.t.start()
         self.mainbox.pack_start(self.tabbook, True, True, 0)
-
         self.tabbook.set_current_page(1)
         self.window.add(self.mainbox)
         self.window.show_all()
         self.tabbook.connect("switch_page", self.set_window_title)
         self.kbd_shortcuts(self.tabbook)
-        
+
+        #load history file; write a first entry to it if it doesn't exist
         if not os.path.exists(os.path.expanduser("~/pyg/history")):
             self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
             self.historyfile.write("http://www.google.com")
@@ -163,31 +165,22 @@ class Browser:
             time.sleep(3300)
 
     def addtab(self, widget=None, dummy=None, dummier=None, dummiest=None, openurl="http://google.com"):
-        #webkit.WebView allows us to embed a webkit browser
-        #it takes care of going backwards/fowards/reloading
-        #it even handles flash
         self.web_view.append(webkit.WebView())
         self.web_view[len(self.web_view)-1].open(openurl)
 
-        #create the back button and connect the action to
-        #allow us to go backwards using webkit
         self.back_button.append(gtk.ToolButton(gtk.STOCK_GO_BACK))
         self.back_button[len(self.back_button)-1].connect("clicked", self.go_back)
 
-        #same idea for forward button
         self.forward_button.append(gtk.ToolButton(gtk.STOCK_GO_FORWARD))
         self.forward_button[len(self.forward_button)-1].connect("clicked", self.go_forward)
 
-        #again for refresh
         self.refresh_button.append(gtk.ToolButton(gtk.STOCK_REFRESH))
         self.refresh_button[len(self.refresh_button)-1].connect("clicked", self.refresh)
 
-        #entry bar for typing in and display URLs, when they type in a site
-        #and hit enter the on_active function is called
         self.url_bar.append(gtk.Entry())
         self.url_bar[len(self.url_bar)-1].connect("activate", self.on_active)
 
-        self.etcbutton.append(gtk.Button('etc'))
+        self.etcbutton.append(gtk.Button('hist'))
         self.etcbutton[len(self.etcbutton)-1].connect("activate", self.historytab)
         self.etcbutton[len(self.etcbutton)-1].connect("clicked", self.historytab)
         self.newtab.append(gtk.Button('+'))
@@ -197,7 +190,6 @@ class Browser:
         self.closetab[len(self.closetab)-1].connect("activate", self.removetab)
         self.closetab[len(self.closetab)-1].connect("clicked", self.removetab)
 
-        #anytime a site is loaded the update_buttons will be called
         self.web_view[len(self.web_view)-1].connect("load_committed", self.update_buttons)
         self.web_view[len(self.web_view)-1].connect("load_finished", self.set_tab_title)
 
@@ -328,28 +320,46 @@ class Browser:
         self.url_bar[self.tabbook.get_current_page()-1].grab_focus()
 
     def historytab(self, something=None, other=None, somethingelse=None, lol=None):
-        historysearch = gtk.Entry()
+        self.historysearch = gtk.Entry()
+        self.historysearch.connect("activate", self.search_history)
         historysearchbutton = gtk.Button('Search')
+        historysearchbutton.connect("activate", self.search_history)
+        historysearchbutton.connect("clicked", self.search_history)
         historysearchbox = gtk.HBox(False, 0)
-        historysearchbox.pack_start(historysearch, False, True, 0)
+        historysearchbox.pack_start(self.historysearch, False, True, 0)
         historysearchbox.pack_start(historysearchbutton, False, True, 0)
-        historyliststore = gtk.ListStore(gobject.TYPE_STRING)
+        self.historyliststore = gtk.ListStore(gobject.TYPE_STRING)
         for item in self.history:
             uri = item.rstrip()
-            historyliststore.append([uri])
-        historylistview = gtk.TreeView(historyliststore)
+            self.historyliststore.append([uri])
+        self.historylistview = gtk.TreeView(self.historyliststore)
         historylistcell = gtk.CellRendererText()
         historylistcol = gtk.TreeViewColumn('URL', historylistcell, text=0)
         historylistscroll = gtk.ScrolledWindow(None, None)
         historylistscroll.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
-        historylistscroll.add(historylistview)
-        historylistview.append_column(historylistcol)
+        historylistscroll.add(self.historylistview)
+        self.historylistview.append_column(historylistcol)
         self.historybox = gtk.VBox(False, 0)
         self.historybox.pack_start(historysearchbox, False, True, 0)
         self.historybox.pack_start(historylistscroll, True, True, 0)
         self.tabbook.append_page(self.historybox)
         self.tabbook.show_all()
         self.tabbook.set_tab_label_text(self.historybox, "History")
+        self.tabbook.set_current_page(self.historybox)
+
+    def search_history(self, whatever=None, something=None, overboard=None):
+        histres = []
+        if self.historysearch.get_text == "":
+            histres = self.history
+        else:
+            terms = self.historysearch.get_text()
+            for row in self.history:
+                if row.rstrip().find(terms) != -1:
+                    histres.append(row.rstrip())
+        histresstore = gtk.ListStore(gobject.TYPE_STRING)
+        for item in histres:
+            histresstore.append([item])
+        self.historylistview.set_model(histresstore)
 
     def main(self):
         gtk.main()
