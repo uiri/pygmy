@@ -33,11 +33,15 @@ class Browser:
     hbox = []
     vbox = []
     url_bar = []
+    history = []
 
     def delete_event(self, widget, event, data=None):
         return False
 
     def destroy(self, widget, data=None):
+        self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
+        self.historyfile.writelines(self.history)
+        self.historyfile.close()
         gtk.main_quit()
 
     def __init__(self):
@@ -62,6 +66,14 @@ class Browser:
         self.window.show_all()
         self.tabbook.connect("switch_page", self.set_window_title)
         self.kbd_shortcuts(self.tabbook)
+        
+        if not os.path.exists(os.path.expanduser("~/pyg/history")):
+            self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
+            self.historyfile.write("http://www.google.com")
+            self.historyfile.close()
+        self.historyfile = open(os.path.expanduser("~/pyg/history"), 'r')
+        self.history = self.historyfile.readlines()
+        self.historyfile.close()
 
     def rssreader(self):
         try:
@@ -69,6 +81,7 @@ class Browser:
             rssstring = rssfile.read()
             self.rsslist = rssstring.split("\n")
             self.rssentries = []
+            rssfile.close()
             for f in self.rsslist:
                 d = feedparser.parse(f, None, None, "Pygmy RSS")
                 for i in d['entries']:
@@ -171,12 +184,12 @@ class Browser:
 
         #entry bar for typing in and display URLs, when they type in a site
         #and hit enter the on_active function is called
-        self.url_bar.append(gtk.Combo())
-        if len(self.url_bar) < 2:
-            print "Ignore the warning, ComboBoxEntry doesn't do what I need it to do easily"
-        self.url_bar[len(self.url_bar)-1].entry.connect("activate", self.on_active)
+        self.url_bar.append(gtk.Entry())
+        self.url_bar[len(self.url_bar)-1].connect("activate", self.on_active)
 
         self.etcbutton.append(gtk.Button('etc'))
+        self.etcbutton[len(self.etcbutton)-1].connect("activate", self.historytab)
+        self.etcbutton[len(self.etcbutton)-1].connect("clicked", self.historytab)
         self.newtab.append(gtk.Button('+'))
         self.newtab[len(self.newtab)-1].connect("activate", self.addtab)
         self.newtab[len(self.newtab)-1].connect("clicked", self.addtab)
@@ -212,7 +225,7 @@ class Browser:
         '''When the user enters an address in the bar, we check to make
            sure they added the http://, if not we add it for them.  Once
            the url is correct, we just ask webkit to open that site.'''
-        url = self.url_bar[self.tabbook.get_current_page()-1].entry.get_text()
+        url = self.url_bar[self.tabbook.get_current_page()-1].get_text()
         try:
             url.index(" ")
             url = "http://google.ca/search?q=" + url
@@ -221,10 +234,10 @@ class Browser:
                 url.index("://")
             except:
                 url = "http://"+url
-        self.url_bar[self.tabbook.get_current_page()-1].entry.set_text(url)
+        self.url_bar[self.tabbook.get_current_page()-1].set_text(url)
         self.web_view[self.tabbook.get_current_page()-1].open(url)
 
-    def go_back(self, widget, data=None):
+    def go_back(self, widget, data=None, other=None, etc=None):
         '''Webkit will remember the links and this will allow us to go
            backwards.'''
         self.web_view[self.tabbook.get_current_page()-1].go_back()
@@ -243,7 +256,17 @@ class Browser:
            It then checks to see if we can go back, if we can it makes the
            back button clickable.  Then it does the same for the foward
            button.'''
-        self.url_bar[self.tabbook.get_current_page()-1].entry.set_text( widget.get_main_frame().get_uri())
+        url = widget.get_main_frame().get_uri()
+        self.url_bar[self.tabbook.get_current_page()-1].set_text(url)
+        unique = 0
+        nurl = url + "\n"
+        for h in self.history:
+            if nurl == h:
+                unique = 1
+            if url == h:
+                unique = 1
+        if unique == 0:
+            self.history.append(url + "\n")
         self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-1], "Loading...")
         self.window.set_title("Loading...")
         self.back_button[self.tabbook.get_current_page()-1].set_sensitive(self.web_view[self.tabbook.get_current_page()-1].can_go_back())
@@ -275,16 +298,17 @@ class Browser:
 
     def removetab(self, widget=None, dummy=None, dummier=None, dummiest=None):
         if self.tabbook.get_current_page() != 0:
-            self.web_view.pop(self.tabbook.get_current_page()-1)
-            self.back_button.pop(self.tabbook.get_current_page()-1)
-            self.forward_button.pop(self.tabbook.get_current_page()-1)
-            self.refresh_button.pop(self.tabbook.get_current_page()-1)
-            self.url_bar.pop(self.tabbook.get_current_page()-1)
-            self.newtab.pop(self.tabbook.get_current_page()-1)
-            self.closetab.pop(self.tabbook.get_current_page()-1)
-            self.scroll_window.pop(self.tabbook.get_current_page()-1)
-            self.hbox.pop(self.tabbook.get_current_page()-1)
-            self.vbox.pop(self.tabbook.get_current_page()-1)
+            if self.tabbook.get_tab_label_text(self.tabbook.get_nth_page(self.tabbook.get_current_page())) != "History":
+                self.web_view.pop(self.tabbook.get_current_page()-1)
+                self.back_button.pop(self.tabbook.get_current_page()-1)
+                self.forward_button.pop(self.tabbook.get_current_page()-1)
+                self.refresh_button.pop(self.tabbook.get_current_page()-1)
+                self.url_bar.pop(self.tabbook.get_current_page()-1)
+                self.newtab.pop(self.tabbook.get_current_page()-1)
+                self.closetab.pop(self.tabbook.get_current_page()-1)
+                self.scroll_window.pop(self.tabbook.get_current_page()-1)
+                self.hbox.pop(self.tabbook.get_current_page()-1)
+                self.vbox.pop(self.tabbook.get_current_page()-1)
         self.tabbook.remove_page(self.tabbook.get_current_page())
         if self.tabbook.get_current_page() == -1:
             self.destroy(self.tabbook)
@@ -296,14 +320,41 @@ class Browser:
         self.kbdgroup.connect_group(ord('W'), gtk.gdk.CONTROL_MASK, 0, self.removetab)
         self.kbdgroup.connect_group(ord('T'), gtk.gdk.CONTROL_MASK, 0, self.addtab)
         self.kbdgroup.connect_group(ord('R'), gtk.gdk.CONTROL_MASK, 0, self.refresh)
+        self.kbdgroup.connect_group(ord('H'), gtk.gdk.CONTROL_MASK, 0, self.historytab)
+        self.kbdgroup.connect_group(ord('['), gtk.gdk.CONTROL_MASK, 0, self.go_back)
+        self.kbdgroup.connect_group(ord(']'), gtk.gdk.CONTROL_MASK, 0, self.go_forward)
 
     def select_all_url(self, kbdgroup, window, key, mod):
-        self.url_bar[self.tabbook.get_current_page()-1].entry.grab_focus()
+        self.url_bar[self.tabbook.get_current_page()-1].grab_focus()
+
+    def historytab(self, something=None, other=None, somethingelse=None, lol=None):
+        historysearch = gtk.Entry()
+        historysearchbutton = gtk.Button('Search')
+        historysearchbox = gtk.HBox(False, 0)
+        historysearchbox.pack_start(historysearch, False, True, 0)
+        historysearchbox.pack_start(historysearchbutton, False, True, 0)
+        historyliststore = gtk.ListStore(gobject.TYPE_STRING)
+        for item in self.history:
+            uri = item.rstrip()
+            historyliststore.append([uri])
+        historylistview = gtk.TreeView(historyliststore)
+        historylistcell = gtk.CellRendererText()
+        historylistcol = gtk.TreeViewColumn('URL', historylistcell, text=0)
+        historylistscroll = gtk.ScrolledWindow(None, None)
+        historylistscroll.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+        historylistscroll.add(historylistview)
+        historylistview.append_column(historylistcol)
+        self.historybox = gtk.VBox(False, 0)
+        self.historybox.pack_start(historysearchbox, False, True, 0)
+        self.historybox.pack_start(historylistscroll, True, True, 0)
+        self.tabbook.append_page(self.historybox)
+        self.tabbook.show_all()
+        self.tabbook.set_tab_label_text(self.historybox, "History")
 
     def main(self):
         gtk.main()
 
+
 if __name__ == "__main__":
     browser = Browser()
     browser.main()
-    
