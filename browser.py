@@ -170,6 +170,8 @@ class Browser:
     def addtab(self, widget=None, dummy=None, dummier=None, dummiest=None, openurl="http://google.com"):
         self.web_view.append(webkit.WebView())
         self.web_view[len(self.web_view)-1].open(openurl)
+        #websettings = self.web_view[len(self.web_view)-1].get_settings()
+        #print websettings.get_user_agent()
 
         self.back_button.append(gtk.ToolButton(gtk.STOCK_GO_BACK))
         self.back_button[len(self.back_button)-1].connect("clicked", self.go_back)
