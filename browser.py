@@ -170,8 +170,6 @@ class Browser:
     def addtab(self, widget=None, dummy=None, dummier=None, dummiest=None, openurl="http://google.com"):
         self.web_view.append(webkit.WebView())
         self.web_view[len(self.web_view)-1].open(openurl)
-        #websettings = self.web_view[len(self.web_view)-1].get_settings()
-        #print websettings.get_user_agent()
 
         self.back_button.append(gtk.ToolButton(gtk.STOCK_GO_BACK))
         self.back_button[len(self.back_button)-1].connect("clicked", self.go_back)
@@ -378,6 +376,7 @@ class Browser:
 
     def search_page(self, some=None, thing=None, other=None, etc=None):
         try:
+            self.searchbox.show()
             self.searchentry.grab_focus()
         except:
             self.searchentry = gtk.Entry()
@@ -387,8 +386,8 @@ class Browser:
             self.searchentry.connect("activate", self.perform_search)
             closesearch = gtk.Button('X')
             self.searchbox = gtk.HBox(False, 0)
-            closesearch.connect("activate", self.remove_search, self.searchbox)
-            closesearch.connect("clicked", self.remove_search, self.searchbox)
+            closesearch.connect("activate", self.remove_search, self.searchbox, self.searchentry)
+            closesearch.connect("clicked", self.remove_search, self.searchbox, self.searchentry)
             self.searchbox.pack_start(self.searchentry, False, True, 0)
             self.searchbox.pack_start(searchbutton, False, True, 0)
             self.searchbox.pack_end(closesearch, False, True, 5)
@@ -399,8 +398,8 @@ class Browser:
     def perform_search(self, some=None, thing=None, other=None, etc=None):
         self.web_view[self.tabbook.get_current_page()-self.n].search_text(self.searchentry.get_text(), False, True, True)
         
-    def remove_search(self, some, searchbox):
-        searchbox.destroy()
+    def remove_search(self, some, searchbox, searchentry):
+        searchbox.hide()
 
     def main(self):
         gtk.main()
