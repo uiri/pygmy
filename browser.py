@@ -127,6 +127,7 @@ class Browser:
             if not os.path.exists(os.path.expanduser("~/pyg/feedlist")):
                 rssfile = open(os.path.expanduser("~/pyg/feedlist"), "w")
                 rssfile.write("None")
+            raise
 
     def show_rss_entry(something, lol, self):
         rssrow, rssdata = self.rssview.get_selection().get_selected()
@@ -285,22 +286,46 @@ class Browser:
             else:
                 self.window.set_title("Pygmy Web")
         except:
-            self.window.set_title("RSS Reader - Pygmy Web")
-
+            if self.tabbook.get_tab_label_text(self.tabbook.get_nth_page(self.tabbook.get_current_page())) != "Pygmy RSS":
+                self.window.set_title("RSS Reader - Pygmy RSS")
+            if self.tabbook.get_tab_label_text(self.tabbook.get_nth_page(self.tabbook.get_current_page())) != "History":
+                self.window.set_title("History - Pygmy Web")
 
     def removetab(self, widget=None, dummy=None, dummier=None, dummiest=None):
-        if self.tabbook.get_current_page() != 0:
-            if self.tabbook.get_tab_label_text(self.tabbook.get_nth_page(self.tabbook.get_current_page())) != "History":
-                self.web_view.pop(self.tabbook.get_current_page()-1)
-                self.back_button.pop(self.tabbook.get_current_page()-1)
-                self.forward_button.pop(self.tabbook.get_current_page()-1)
-                self.refresh_button.pop(self.tabbook.get_current_page()-1)
-                self.url_bar.pop(self.tabbook.get_current_page()-1)
-                self.newtab.pop(self.tabbook.get_current_page()-1)
-                self.closetab.pop(self.tabbook.get_current_page()-1)
-                self.scroll_window.pop(self.tabbook.get_current_page()-1)
-                self.hbox.pop(self.tabbook.get_current_page()-1)
-                self.vbox.pop(self.tabbook.get_current_page()-1)
+        try:
+            self.tabbook.get_tab_label(self.historybox)
+            if self.tabbook.get_tab_label(self.historybox) != None:
+                n = 3
+                if self.tabbook.get_tab_label(self.rssbox) != None:
+                    n = n + 1
+            else:
+                n = 2
+                if self.tabbook.get_tab_label(self.rssbox) != None:
+                    n = n + 1
+            if self.tabbook.get_current_page()-n < 0:
+                self.web_view.pop(self.tabbook.get_current_page()-n)
+                self.back_button.pop(self.tabbook.get_current_page()-n)
+                self.forward_button.pop(self.tabbook.get_current_page()-n)
+                self.refresh_button.pop(self.tabbook.get_current_page()-n)
+                self.url_bar.pop(self.tabbook.get_current_page()-n)
+                self.newtab.pop(self.tabbook.get_current_page()-n)
+                self.closetab.pop(self.tabbook.get_current_page()-n)
+                self.scroll_window.pop(self.tabbook.get_current_page()-n)
+                self.hbox.pop(self.tabbook.get_current_page()-n)
+                self.vbox.pop(self.tabbook.get_current_page()-n)
+        except:
+            n = 1
+            if self.tabbook.get_current_page()-n >= 0:
+                self.web_view.pop(self.tabbook.get_current_page()-n)
+                self.back_button.pop(self.tabbook.get_current_page()-n)
+                self.forward_button.pop(self.tabbook.get_current_page()-n)
+                self.refresh_button.pop(self.tabbook.get_current_page()-n)
+                self.url_bar.pop(self.tabbook.get_current_page()-n)
+                self.newtab.pop(self.tabbook.get_current_page()-n)
+                self.closetab.pop(self.tabbook.get_current_page()-n)
+                self.scroll_window.pop(self.tabbook.get_current_page()-n)
+                self.hbox.pop(self.tabbook.get_current_page()-n)
+                self.vbox.pop(self.tabbook.get_current_page()-n)
         self.tabbook.remove_page(self.tabbook.get_current_page())
         if self.tabbook.get_current_page() == -1:
             self.destroy(self.tabbook)
@@ -342,10 +367,10 @@ class Browser:
         self.historybox = gtk.VBox(False, 0)
         self.historybox.pack_start(historysearchbox, False, True, 0)
         self.historybox.pack_start(historylistscroll, True, True, 0)
-        self.tabbook.append_page(self.historybox)
+        self.tabbook.prepend_page(self.historybox)
         self.tabbook.show_all()
         self.tabbook.set_tab_label_text(self.historybox, "History")
-        self.tabbook.set_current_page(self.historybox)
+        self.tabbook.set_current_page(0)
 
     def search_history(self, whatever=None, something=None, overboard=None):
         histres = []
