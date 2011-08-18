@@ -34,6 +34,7 @@ class Browser:
     vbox = []
     url_bar = []
     history = []
+    n = 1
 
     def delete_event(self, widget, event, data=None):
         return False
@@ -212,13 +213,13 @@ class Browser:
         self.vbox[len(self.vbox)-1].pack_start(self.scroll_window[len(self.scroll_window)-1], True, True, 0)
         self.tabbook.append_page(self.vbox[len(self.vbox)-1])
         self.tabbook.show_all()
-        self.tabbook.set_current_page(len(self.vbox))
+        self.tabbook.set_current_page(len(self.vbox)-1+self.n)
 
     def on_active(self, widge, data=None):
         '''When the user enters an address in the bar, we check to make
            sure they added the http://, if not we add it for them.  Once
            the url is correct, we just ask webkit to open that site.'''
-        url = self.url_bar[self.tabbook.get_current_page()-1].get_text()
+        url = self.url_bar[self.tabbook.get_current_page()-self.n].get_text()
         try:
             url.index(" ")
             url = "http://google.ca/search?q=" + url
@@ -227,22 +228,22 @@ class Browser:
                 url.index("://")
             except:
                 url = "http://"+url
-        self.url_bar[self.tabbook.get_current_page()-1].set_text(url)
-        self.web_view[self.tabbook.get_current_page()-1].open(url)
+        self.url_bar[self.tabbook.get_current_page()-self.n].set_text(url)
+        self.web_view[self.tabbook.get_current_page()-self.n].open(url)
 
     def go_back(self, widget, data=None, other=None, etc=None):
         '''Webkit will remember the links and this will allow us to go
            backwards.'''
-        self.web_view[self.tabbook.get_current_page()-1].go_back()
+        self.web_view[self.tabbook.get_current_page()-self.n].go_back()
 
     def go_forward(self, widget, data=None):
         '''Webkit will remember the links and this will allow us to go
            forwards.'''
-        self.web_view[self.tabbook.get_current_page()-1].go_forward()
+        self.web_view[self.tabbook.get_current_page()-self.n].go_forward()
 
     def refresh(self, widget, data=None, etc=None, more=None):
         '''Simple makes webkit reload the current back.'''
-        self.web_view[self.tabbook.get_current_page()-1].reload()
+        self.web_view[self.tabbook.get_current_page()-self.n].reload()
 
     def update_buttons(self, widget, data=None):
         '''Gets the current url entry and puts that into the url bar.
@@ -250,7 +251,7 @@ class Browser:
            back button clickable.  Then it does the same for the foward
            button.'''
         url = widget.get_main_frame().get_uri()
-        self.url_bar[self.tabbook.get_current_page()-1].set_text(url)
+        self.url_bar[self.tabbook.get_current_page()-self.n].set_text(url)
         unique = 0
         nurl = url + "\n"
         for h in self.history:
@@ -260,19 +261,19 @@ class Browser:
                 unique = 1
         if unique == 0:
             self.history.append(url + "\n")
-        self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-1], "Loading...")
+        self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], "Loading...")
         self.window.set_title("Loading...")
-        self.back_button[self.tabbook.get_current_page()-1].set_sensitive(self.web_view[self.tabbook.get_current_page()-1].can_go_back())
-        self.forward_button[self.tabbook.get_current_page()-1].set_sensitive(self.web_view[self.tabbook.get_current_page()-1].can_go_forward())
+        self.back_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_back())
+        self.forward_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_forward())
 
     def set_tab_title(self, widget, data=None):
-        if self.web_view[self.tabbook.get_current_page()-1].get_main_frame().get_title() != None:
-            if len(self.web_view[self.tabbook.get_current_page()-1].get_main_frame().get_title()) > 15:
-                self.web_view[self.tabbook.get_current_page()-1].execute_script('document.title=document.title.substring(0,12)+"...";')
-            self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-1], self.web_view[self.tabbook.get_current_page()-1].get_main_frame().get_title())
-            self.window.set_title(self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-1]).get_text() + " - Pygmy Web")
+        if self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title() != None:
+            if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()) > 15:
+                self.web_view[self.tabbook.get_current_page()-self.n].execute_script('document.title=document.title.substring(0,12)+"...";')
+            self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title())
+            self.window.set_title(self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).get_text() + " - Pygmy Web")
         else:
-            if len(self.web_view[self.tabbook.get_current_page()-1].get_main_frame().get_uri()) > 15:
+            if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_uri()) > 15:
                 uri = self.web_view[self.tabbook.get_current_page()].get_main_frame().get_uri()[0:12] + "..."
             else:
                 uri = self.web_view[self.tabbook.get_current_page()].get_main_frame().get_uri()
@@ -292,40 +293,19 @@ class Browser:
                 self.window.set_title("History - Pygmy Web")
 
     def removetab(self, widget=None, dummy=None, dummier=None, dummiest=None):
-        try:
-            self.tabbook.get_tab_label(self.historybox)
-            if self.tabbook.get_tab_label(self.historybox) != None:
-                n = 3
-                if self.tabbook.get_tab_label(self.rssbox) != None:
-                    n = n + 1
-            else:
-                n = 2
-                if self.tabbook.get_tab_label(self.rssbox) != None:
-                    n = n + 1
-            if self.tabbook.get_current_page()-n < 0:
-                self.web_view.pop(self.tabbook.get_current_page()-n)
-                self.back_button.pop(self.tabbook.get_current_page()-n)
-                self.forward_button.pop(self.tabbook.get_current_page()-n)
-                self.refresh_button.pop(self.tabbook.get_current_page()-n)
-                self.url_bar.pop(self.tabbook.get_current_page()-n)
-                self.newtab.pop(self.tabbook.get_current_page()-n)
-                self.closetab.pop(self.tabbook.get_current_page()-n)
-                self.scroll_window.pop(self.tabbook.get_current_page()-n)
-                self.hbox.pop(self.tabbook.get_current_page()-n)
-                self.vbox.pop(self.tabbook.get_current_page()-n)
-        except:
-            n = 1
-            if self.tabbook.get_current_page()-n >= 0:
-                self.web_view.pop(self.tabbook.get_current_page()-n)
-                self.back_button.pop(self.tabbook.get_current_page()-n)
-                self.forward_button.pop(self.tabbook.get_current_page()-n)
-                self.refresh_button.pop(self.tabbook.get_current_page()-n)
-                self.url_bar.pop(self.tabbook.get_current_page()-n)
-                self.newtab.pop(self.tabbook.get_current_page()-n)
-                self.closetab.pop(self.tabbook.get_current_page()-n)
-                self.scroll_window.pop(self.tabbook.get_current_page()-n)
-                self.hbox.pop(self.tabbook.get_current_page()-n)
-                self.vbox.pop(self.tabbook.get_current_page()-n)
+        if self.tabbook.get_current_page()-self.n >= 0:
+            self.web_view.pop(self.tabbook.get_current_page()-self.n)
+            self.back_button.pop(self.tabbook.get_current_page()-self.n)
+            self.forward_button.pop(self.tabbook.get_current_page()-self.n)
+            self.refresh_button.pop(self.tabbook.get_current_page()-self.n)
+            self.url_bar.pop(self.tabbook.get_current_page()-self.n)
+            self.newtab.pop(self.tabbook.get_current_page()-self.n)
+            self.closetab.pop(self.tabbook.get_current_page()-self.n)
+            self.scroll_window.pop(self.tabbook.get_current_page()-self.n)
+            self.hbox.pop(self.tabbook.get_current_page()-self.n)
+            self.vbox.pop(self.tabbook.get_current_page()-self.n)
+        else:
+            self.n = self.n - 1
         self.tabbook.remove_page(self.tabbook.get_current_page())
         if self.tabbook.get_current_page() == -1:
             self.destroy(self.tabbook)
@@ -342,9 +322,10 @@ class Browser:
         self.kbdgroup.connect_group(ord(']'), gtk.gdk.CONTROL_MASK, 0, self.go_forward)
 
     def select_all_url(self, kbdgroup, window, key, mod):
-        self.url_bar[self.tabbook.get_current_page()-1].grab_focus()
+        self.url_bar[self.tabbook.get_current_page()-self.n].grab_focus()
 
     def historytab(self, something=None, other=None, somethingelse=None, lol=None):
+        self.n = self.n + 1
         self.historysearch = gtk.Entry()
         self.historysearch.connect("activate", self.search_history)
         historysearchbutton = gtk.Button('Search')
@@ -385,6 +366,9 @@ class Browser:
         for item in histres:
             histresstore.append([item])
         self.historylistview.set_model(histresstore)
+
+#    def search_page(self):
+ #       self.web_view[self.tabbook.get_current_page()-self.n].mark_text_matches()
 
     def main(self):
         gtk.main()
