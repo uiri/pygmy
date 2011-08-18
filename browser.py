@@ -119,6 +119,7 @@ class Browser:
             self.rssbox.pack_start(rssdisplaybox, False, True, 0)
             self.tabbook.prepend_page(self.rssbox)
             self.tabbook.set_tab_label_text(self.rssbox, "Pygmy RSS")
+            self.tabbook.get_tab_label(self.rssbox).set_tooltip_text("Pygmy RSS")
             self.rssview.get_selection().connect("changed", self.show_rss_entry, self)
             self.tabbook.show_all()
             self.rsslinkcb = 'lol'
@@ -262,15 +263,18 @@ class Browser:
         if unique == 0:
             self.history.append(url + "\n")
         self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], "Loading...")
+        self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).set_tooltip_text("LOADING!")
         self.window.set_title("Loading...")
         self.back_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_back())
         self.forward_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_forward())
 
     def set_tab_title(self, widget, data=None):
         if self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title() != None:
+            real_title = self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()
             if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()) > 15:
                 self.web_view[self.tabbook.get_current_page()-self.n].execute_script('document.title=document.title.substring(0,12)+"...";')
             self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title())
+            self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).set_tooltip_text(real_title)
             self.window.set_title(self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).get_text() + " - Pygmy Web")
         else:
             if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_uri()) > 15:
@@ -278,6 +282,7 @@ class Browser:
             else:
                 uri = self.web_view[self.tabbook.get_current_page()].get_main_frame().get_uri()
             self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()], uri)
+            self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).set_tooltip_text(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_uri())
             self.window.set_title("Pygmy Web")
 
     def set_window_title(self, widget, weirdpointerthing, n):
@@ -352,6 +357,7 @@ class Browser:
         self.tabbook.prepend_page(self.historybox)
         self.tabbook.show_all()
         self.tabbook.set_tab_label_text(self.historybox, "History")
+        self.tabbook.get_tab_label(self.historybox).set_tooltip_text("History")
         self.tabbook.set_current_page(0)
 
     def search_history(self, whatever=None, something=None, overboard=None):
