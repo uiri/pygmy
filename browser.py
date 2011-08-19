@@ -35,13 +35,16 @@ class Browser:
     url_bar = []
     history = []
     n = 1
+    change_title = 0
 
     def delete_event(self, widget, event, data=None):
         return False
 
     def destroy(self, widget, data=None):
         self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
-        self.historyfile.writelines(self.history)
+        for a in self.history:
+            a = str(a[0] + ": " + a[1])
+            self.historyfile.writelines(a)
         self.historyfile.close()
         gtk.main_quit()
 
@@ -75,7 +78,16 @@ class Browser:
             self.historyfile.write("http://www.google.com")
             self.historyfile.close()
         self.historyfile = open(os.path.expanduser("~/pyg/history"), 'r')
-        self.history = self.historyfile.readlines()
+        self.historytemp = self.historyfile.readlines()
+        self.history = []
+        for a in self.historytemp:
+            a = a.split(": ")
+            self.history.append(a)
+        while 1:
+            try:
+                self.history.remove('\n')
+            except:
+                break
         self.historyfile.close()
 
     def rssreader(self):
@@ -289,16 +301,17 @@ class Browser:
                 unique = 0
             nurl = url + "\n"
             for h in self.history:
-                if nurl == h:
+                if nurl == h[1]:
                     unique = 1
-                if url == h:
+                if url == h[1]:
                     unique = 1
                 if unique == 0:
-                    self.history.append(url + "\n")
+                    self.change_title = 1
+                    self.history.append(["Loading...", url + "\n"])
                     try:
                         self.historybox
                         uri = url.rstrip()
-                        self.historyliststore.append([uri])
+                        self.historyliststore.append([self.history[len(self.history)-1][0], uri])
                     except:
                         uri = url.rstrip()
             self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], "Loading...")
@@ -309,6 +322,8 @@ class Browser:
 
     def set_tab_title(self, widget, data=None):
         if self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title() != None:
+            if self.change_title == 1:
+                self.history[len(self.history)-1][0] = self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()
             real_title = self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()
             if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()) > 15:
                 self.web_view[self.tabbook.get_current_page()-self.n].execute_script('document.title=document.title.substring(0,12)+"...";')
@@ -323,6 +338,7 @@ class Browser:
             self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()], uri)
             self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).set_tooltip_text(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_uri())
             self.window.set_title("Pygmy Web")
+        self.change_title = 0
 
     def set_window_title(self, widget, weirdpointerthing, n):
         try:
@@ -383,17 +399,20 @@ class Browser:
         historysearchbox.pack_start(self.historysearch, False, True, 0)
         historysearchbox.pack_start(historysearchbutton, False, True, 0)
         historysearchbox.pack_end(histclosebutton, False, True, 0)
-        self.historyliststore = gtk.ListStore(gobject.TYPE_STRING)
+        self.historyliststore = gtk.ListStore(gobject.TYPE_STRING, gobject.TYPE_STRING)
         for item in self.history:
-            uri = item.rstrip()
-            self.historyliststore.append([uri])
+            uri = item[1].rstrip()
+            self.historyliststore.append([item[0], uri])
         self.historylistview = gtk.TreeView(self.historyliststore)
         historylistcell = gtk.CellRendererText()
-        historylistcol = gtk.TreeViewColumn('URL', historylistcell, text=0)
+        historylistcell2 = gtk.CellRendererText()
+        historylistcol = gtk.TreeViewColumn('Title', historylistcell, text=0)
+        historylistcol2 = gtk.TreeViewColumn('URL', historylistcell2, text=1)
         historylistscroll = gtk.ScrolledWindow(None, None)
         historylistscroll.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
         historylistscroll.add(self.historylistview)
         self.historylistview.append_column(historylistcol)
+        self.historylistview.append_column(historylistcol2)
         self.historybox = gtk.VBox(False, 0)
         self.historybox.pack_start(historysearchbox, False, True, 0)
         self.historybox.pack_start(historylistscroll, True, True, 0)
@@ -417,11 +436,11 @@ class Browser:
         else:
             terms = self.historysearch.get_text()
             for row in self.history:
-                if row.rstrip().find(terms) != -1:
-                    histres.append(row.rstrip())
-        histresstore = gtk.ListStore(gobject.TYPE_STRING)
+                if row[1].rstrip().find(terms) != -1:
+                    histres.append([row[0], row[1].rstrip()])
+        histresstore = gtk.ListStore(gobject.TYPE_STRING, gobject.TYPE_STRING)
         for item in histres:
-            histresstore.append([item])
+            histresstore.append([item[0], item[1]])
         self.historylistview.set_model(histresstore)
 
     def search_page(self, some=None, thing=None, other=None, etc=None):
