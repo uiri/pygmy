@@ -18,7 +18,7 @@
 # Based off of GPL'd code snippet I found.
 # <http://www.eurion.net/python-snippets/snippet/Webkit%20Browser.html>
 
-import pygtk, gtk, webkit, gobject, feedparser, os, time, threading, urllib2
+import pygtk, gtk, webkit, gobject, feedparser, os, time, threading, urllib2, urllib
 from operator import itemgetter
 
 class Browser:
@@ -228,6 +228,7 @@ class Browser:
 
         self.web_view[len(self.web_view)-1].connect("load_committed", self.update_buttons)
         self.web_view[len(self.web_view)-1].connect("load_finished", self.set_tab_title)
+        self.web_view[len(self.web_view)-1].connect("download_requested", self.download)
 
         self.scroll_window.append(gtk.ScrolledWindow(None, None))
         self.scroll_window[len(self.scroll_window)-1].add(self.web_view[len(self.web_view)-1])
@@ -469,6 +470,18 @@ class Browser:
         
     def remove_search(self, some, searchbox, searchentry):
         searchbox.hide()
+
+    def download(self, widget, download):
+        saveas = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK))
+        saveas.set_default_response(gtk.RESPONSE_OK)
+        resp = saveas.run()
+        if resp == gtk.RESPONSE_OK:
+            downloadto = saveas.get_filename()
+        saveas.destroy()
+        downloadfrom = download.get_network_request().get_uri()
+        urllib.urlretrieve(downloadfrom, downloadto)
+            
+
 
     def main(self):
         gtk.main()
