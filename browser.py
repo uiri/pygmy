@@ -18,7 +18,7 @@
 # Based off of GPL'd code snippet I found.
 # <http://www.eurion.net/python-snippets/snippet/Webkit%20Browser.html>
 
-import pygtk, gtk, webkit, gobject, feedparser, os, time, threading, urllib2, urllib, platform
+import pygtk, gtk, webkit, gobject, os, time, threading, urllib2, urllib, platform, feedparser
 from operator import itemgetter
 
 class Browser:
@@ -30,6 +30,7 @@ class Browser:
     newtab = []
     closetab = []
     etcbutton = []
+    historybutton = []
     hbox = []
     vbox = []
     url_bar = []
@@ -41,29 +42,63 @@ class Browser:
         return False
 
     def destroy(self, widget, data=None):
-        self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
-        for a in self.history:
-            a = str(a[0] + ": " + a[1])
-            self.historyfile.writelines(a)
-        self.historyfile.close()
+        if self.preferences != None:
+            prefsfile = open(os.path.expanduser("~/pyg/prefs"), 'w')
+            for pref in self.preferences:
+                pref = pref + "\n"
+                prefsfile.writelines(pref)
+            if self.preferences[3] != '1':
+                self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
+                for a in self.history:
+                    a = str(a[0] + ": " + a[1])
+                    self.historyfile.writelines(a)
+                self.historyfile.close()
         gtk.main_quit()
 
     def __init__(self):
-
-        #gobject.threads_init()
+        if os.path.exists(os.path.expanduser("~/pyg/prefs")):
+            prefsfile = open(os.path.expanduser("~/pyg/prefs"), 'r')
+            tmppref = prefsfile.readlines()
+            self.preferences = []
+            prefsfile.close()
+            for pref in tmppref:
+                self.preferences.append(pref.rstrip())
+        else:
+            self.preferences = None
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_resizable(True)
         self.window.set_title("Pygmy Web")
         self.window.connect("delete_event", self.delete_event)
         self.window.connect("destroy", self.destroy)
-        self.window.set_default_size(600,600)
+        self.window.set_default_size(800,600)
         self.tabbook = gtk.Notebook()
-        self.tabbook.set_tab_pos(gtk.POS_LEFT)
-        self.addtab()
-        self.rssreader()
-        self.t = threading.Thread(target=self.ping_rss)
-        self.t.daemon = True
-        self.t.start()
+        self.tabbook.set_scrollable(True)
+        self.tabbook.popup_enable()
+        if self.preferences != None:
+            if self.preferences[1] == '0':
+                self.preferences[1] = "http://google.com/"
+            if self.preferences[0] == '1':
+                self.tabbook.set_tab_pos(gtk.POS_LEFT)
+            elif self.preferences[0] == '2':
+                self.tabbook.set_tab_pos(gtk.POS_TOP)
+            elif self.preferences[0] == '3':
+                self.tabbook.set_tab_pos(gtk.POS_RIGHT)
+            elif self.preferences[0] == '4':
+                self.tabbook.set_tab_pos(gtk.POS_BOTTOM)
+            else:
+                self.tabbook.set_tab_pos(gtk.POS_LEFT)
+            self.addtab(openurl=self.preferences[1])
+            if self.preferences[2] == '1':
+                self.rssreader()
+                self.t = threading.Thread(target=self.ping_rss)
+                self.t.daemon = True
+                self.t.start()
+            else:
+                self.n = self.n - 1
+        else:
+            self.tabbook.set_tab_pos(gtk.POS_LEFT)
+            self.addtab()
+            self.n = self.n - 1
         self.mainbox.pack_start(self.tabbook, True, True, 0)
         self.tabbook.set_current_page(1)
         self.window.add(self.mainbox)
@@ -71,23 +106,24 @@ class Browser:
         self.tabbook.connect("switch_page", self.set_window_title)
         self.kbd_shortcuts(self.tabbook)
 
-        #load history file; write a first entry to it if it doesn't exist
-        if not os.path.exists(os.path.expanduser("~/pyg/history")):
-            self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
-            self.historyfile.write("http://www.google.com")
-            self.historyfile.close()
-        self.historyfile = open(os.path.expanduser("~/pyg/history"), 'r')
-        self.historytemp = self.historyfile.readlines()
-        self.history = []
-        for a in self.historytemp:
-            a = a.split(": ")
-            self.history.append(a)
-        while 1:
-            try:
-                self.history.remove('\n')
-            except:
-                break
-        self.historyfile.close()
+        if self.preferences != None:
+            if self.preferences[3] == '1': 
+                if not os.path.exists(os.path.expanduser("~/pyg/history")):
+                    self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
+                    self.historyfile.write("http://www.google.com")
+                    self.historyfile.close()
+                self.historyfile = open(os.path.expanduser("~/pyg/history"), 'r')
+                self.historytemp = self.historyfile.readlines()
+                self.history = []
+                for a in self.historytemp:
+                    a = a.split(": ")
+                    self.history.append(a)
+                    while 1:
+                        try:
+                            self.history.remove('\n')
+                        except:
+                            break
+                self.historyfile.close()
 
     def rssreader(self):
         try:
@@ -215,9 +251,12 @@ class Browser:
         self.url_bar.append(gtk.Entry())
         self.url_bar[len(self.url_bar)-1].connect("activate", self.on_active)
 
-        self.etcbutton.append(gtk.Button('hist'))
-        self.etcbutton[len(self.etcbutton)-1].connect("activate", self.historytab)
-        self.etcbutton[len(self.etcbutton)-1].connect("clicked", self.historytab)
+        self.etcbutton.append(gtk.Button('Prefs'))
+        self.historybutton.append(gtk.Button('Hist'))
+        self.historybutton[len(self.historybutton)-1].connect("activate", self.historytab)
+        self.historybutton[len(self.historybutton)-1].connect("clicked", self.historytab)
+        self.etcbutton[len(self.etcbutton)-1].connect("activate", self.show_prefs)
+        self.etcbutton[len(self.etcbutton)-1].connect("clicked", self.show_prefs)
         self.newtab.append(gtk.Button('+'))
         self.newtab[len(self.newtab)-1].connect("activate", self.addtab)
         self.newtab[len(self.newtab)-1].connect("clicked", self.addtab)
@@ -242,6 +281,7 @@ class Browser:
         self.hbox[len(self.hbox)-1].pack_start(self.newtab[len(self.newtab)-1], False, True, 3)
         self.hbox[len(self.hbox)-1].pack_start(self.closetab[len(self.closetab)-1], False, True, 0)
         self.hbox[len(self.hbox)-1].pack_start(self.url_bar[len(self.url_bar)-1], True, True, 3)
+        self.hbox[len(self.hbox)-1].pack_start(self.historybutton[len(self.historybutton)-1], False, True, 0)
         self.hbox[len(self.hbox)-1].pack_start(self.etcbutton[len(self.etcbutton)-1], False, True, 0)
         self.vbox[len(self.vbox)-1].pack_start(self.hbox[len(self.hbox)-1], False, True, 0)
         self.vbox[len(self.vbox)-1].pack_start(self.scroll_window[len(self.scroll_window)-1], True, True, 0)
@@ -340,18 +380,23 @@ class Browser:
             self.forward_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_forward())
 
     def set_tab_title(self, widget, data=None):
+        if self.preferences != None:
+            maxlen = self.preferences[4]
+        else:
+            maxlen = '15'
         if self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title() != None:
             if self.change_title == 1:
                 self.history[len(self.history)-1][0] = self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()
             real_title = self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()
-            if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()) > 15:
-                self.web_view[self.tabbook.get_current_page()-self.n].execute_script('document.title=document.title.substring(0,12)+"...";')
+            if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()) > maxlen:
+                self.web_view[self.tabbook.get_current_page()-self.n].execute_script('document.title=document.title.substring(0,' + maxlen - 3 + ')+"...";')
             self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title())
             self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).set_tooltip_text(real_title)
             self.window.set_title(self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).get_text() + " - Pygmy Web")
         else:
-            if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_uri()) > 15:
-                uri = self.web_view[self.tabbook.get_current_page()].get_main_frame().get_uri()[0:12] + "..."
+            maxlen = int(maxlen)
+            if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_uri()) > maxlen:
+                uri = self.web_view[self.tabbook.get_current_page()].get_main_frame().get_uri()[0:maxlen-3] + "..."
             else:
                 uri = self.web_view[self.tabbook.get_current_page()].get_main_frame().get_uri()
             self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()], uri)
@@ -400,12 +445,12 @@ class Browser:
         self.kbdgroup.connect_group(ord('['), gtk.gdk.CONTROL_MASK, 0, self.go_back)
         self.kbdgroup.connect_group(ord(']'), gtk.gdk.CONTROL_MASK, 0, self.go_forward)
         self.kbdgroup.connect_group(ord('F'), gtk.gdk.CONTROL_MASK, 0, self.search_page)
+        self.kbdgroup.connect_group(ord('P'), gtk.gdk.MOD1_MASK, 0, self.show_prefs)
 
     def select_all_url(self, kbdgroup, window, key, mod):
         self.url_bar[self.tabbook.get_current_page()-self.n].grab_focus()
 
     def historytab(self, something=None, other=None, somethingelse=None, lol=None):
-        self.n = self.n + 1
         self.historysearch = gtk.Entry()
         histclosebutton = gtk.Button('X')
         histclosebutton.connect("activate", self.removetab)
@@ -440,6 +485,7 @@ class Browser:
         self.tabbook.set_tab_label_text(self.historybox, "History")
         self.tabbook.get_tab_label(self.historybox).set_tooltip_text("History")
         self.tabbook.set_current_page(0)
+        self.n = self.n + 1
         self.historylistview.connect("row-activated", self.openhistoryitem)
 
     def openhistoryitem(self, treeview, path, view_column):
@@ -498,12 +544,112 @@ class Browser:
         saveas.destroy()
         downloadfrom = download.get_network_request().get_uri()
         urllib.urlretrieve(downloadfrom, downloadto)
-            
 
+    def show_prefs(self, widget, some=None, thing=None, other=None):
+        self.prefwin = gtk.Window()
+        self.prefwin.set_title("Pygmy Preferences")
+        self.prefwin.set_default_size(200, 200)
+
+        tabposbox = gtk.HBox(False, 0)
+        self.leftbutton = gtk.RadioButton(None, "Left")
+        self.topbutton = gtk.RadioButton(self.leftbutton, "Top")
+        self.rightbutton = gtk.RadioButton(self.leftbutton, "Right")
+        self.bottombutton = gtk.RadioButton(self.leftbutton, "Bottom")
+        tabposlabel = gtk.Label("Tab Position:")
+        tabposbox.pack_start(tabposlabel, False, True, 5)
+        tabposbox.pack_start(self.leftbutton, False, True, 5)
+        tabposbox.pack_start(self.topbutton, False, True, 5)
+        tabposbox.pack_start(self.rightbutton, False, True, 5)
+        tabposbox.pack_start(self.bottombutton, False, True, 5)
+
+        homebox = gtk.HBox(False, 0)
+        homelabel = gtk.Label("Homepage: ")
+        self.homeentry = gtk.Entry()
+        homebox.pack_start(homelabel, False, True, 10)
+        homebox.pack_start(self.homeentry, True, True, 10)
+
+        checkbox = gtk.HBox(False, 0)
+        self.rssbutton = gtk.CheckButton("Show RSS Tab", False)
+        self.histbutton = gtk.CheckButton("Record History", False)
+        checkbox.pack_start(self.rssbutton, False, True, 0)
+        checkbox.pack_start(self.histbutton, False, True, 0)
+
+        widthbox = gtk.HBox(False, 0)
+        widthlabel = gtk.Label("Tab width (in characters):")
+        self.widthbutton = gtk.SpinButton()
+        self.widthbutton.set_range(0, 99)
+        self.widthbutton.set_value(15)
+        self.widthbutton.set_increments(1.0, 1.0)
+        widthbox.pack_start(widthlabel, False, True, 5)
+        widthbox.pack_start(self.widthbutton, False, True, 5)
+
+        donebox = gtk.HBox(False, 0)
+        cancelbutton = gtk.Button(stock=gtk.STOCK_CANCEL)
+        okbutton = gtk.Button(stock=gtk.STOCK_OK)
+        donebox.pack_start(cancelbutton, True, False, 0)
+        donebox.pack_start(okbutton, True, False, 0)
+
+        okbutton.connect("activate", self.write_prefs)
+        okbutton.connect("clicked", self.write_prefs)
+        cancelbutton.connect("activate", self.write_prefs)
+        cancelbutton.connect("clicked", self.write_prefs)
+
+        if self.preferences != None:
+            if self.preferences[0] == '4':
+                bottombutton.set_active(True)
+            elif self.preferences[0] == '2':
+                self.topbutton.set_active(True)
+            elif self.preferences[0] =='3':
+                self.rightbutton.set_active(True)
+            else:
+                self.leftbutton.set_active(True)
+            self.homeentry.set_text(self.preferences[1])
+            if self.preferences[2] != '0':
+               self.rssbutton.get_active()
+            if self.preferences[3] == '0':
+                self.histbutton.set_active(True)
+            self.widthbutton.set_value(float(self.preferences[4]))
+        
+        prefbox = gtk.VBox(False, 0)
+        prefbox.pack_start(tabposbox, False, True, 5)
+        prefbox.pack_start(homebox, False, True, 5)
+        prefbox.pack_start(checkbox, False, True, 5)
+        prefbox.pack_start(widthbox, False, True, 5)
+        prefbox.pack_start(donebox, False, True, 5)
+        self.prefwin.add(prefbox)
+        self.prefwin.show_all()
+
+    def write_prefs(self, first):
+        if first.get_label() == 'gtk-ok':
+            self.preferences = []
+            if self.bottombutton.get_active():
+                self.preferences.append('4')
+            elif self.topbutton.get_active():
+                self.preferences.append('2')
+            elif self.rightbutton.get_active():
+                self.preferences.append('3')
+            else:
+                self.preferences.append('1')
+            if self.homeentry.get_text():
+                self.preferences.append(self.homeentry.get_text())
+            else:
+                self.preferences.append('0')
+            if self.rssbutton.get_active():
+                self.preferences.append('1')
+            else:
+                self.preferences.append('0')
+            if self.histbutton.get_active():
+                self.preferences.append('0')
+            else:
+                self.preferences.append('1')
+            self.preferences.append(str(self.widthbutton.get_value_as_int()))
+        self.prefwin.hide()
+
+    def destroy_prefs(self):
+        self.prefwin.hide()
 
     def main(self):
         gtk.main()
-
 
 if __name__ == "__main__":
     browser = Browser()
