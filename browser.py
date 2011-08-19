@@ -167,7 +167,28 @@ class Browser:
                     self.rssstore.append([title, x[0], x[1], x[2], x[3], x[4], x[5], x[6]])
             time.sleep(3300)
 
-    def addtab(self, widget=None, dummy=None, dummier=None, dummiest=None, openurl="http://google.com"):
+    def open_uri(self, url):
+        request = urllib2.Request(url)
+        request.add_header('User-Agent', "Mozilla/5.0 AppleWebKit/531.2+ (KHTML, like Gecko) Pygmy/0.5.0 Safari/531.2+")
+        res = []
+        f = urllib2.urlopen(request)
+        res.append(f.read())
+        header = str(f.info())
+        print header
+        for s in header.split("\r\n"):
+            try:
+                s.index("Type")
+                x = s.split(";")
+                x[0] = x[0][14:]
+                x[1] = x[1][9:]
+                res.append(x[0])
+                res.append(x[1])
+            except:
+                s = s + "\r\n"
+        res.append(url[:url.find('/', 10)])
+        return res
+
+    def addtab(self, widget=None, dummy=None, dummier=None, dummiest=None, openurl="http://google.com/"):
         self.web_view.append(webkit.WebView())
         self.web_view[len(self.web_view)-1].open(openurl)
 
@@ -230,7 +251,12 @@ class Browser:
             except:
                 url = "http://"+url
         self.url_bar[self.tabbook.get_current_page()-self.n].set_text(url)
-        self.web_view[self.tabbook.get_current_page()-self.n].open(url)
+        try:
+            url.index("https")
+            r = self.open_uri(url)
+            self.web_view[self.tabbook.get_current_page()-self.n].load_string(x[0], x[1], x[2], x[3])
+        except:
+            self.web_view[self.tabbook.get_current_page()-self.n].open(url)
 
     def go_back(self, widget, data=None, other=None, etc=None):
         '''Webkit will remember the links and this will allow us to go
@@ -253,20 +279,33 @@ class Browser:
            button.'''
         url = widget.get_main_frame().get_uri()
         self.url_bar[self.tabbook.get_current_page()-self.n].set_text(url)
-        unique = 0
-        nurl = url + "\n"
-        for h in self.history:
-            if nurl == h:
-                unique = 1
-            if url == h:
-                unique = 1
-        if unique == 0:
-            self.history.append(url + "\n")
-        self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], "Loading...")
-        self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).set_tooltip_text("LOADING!")
-        self.window.set_title("Loading...")
-        self.back_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_back())
-        self.forward_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_forward())
+        if self.window.get_title() != "Loading...":
+            try:
+                url.index("https")
+                r = self.open_uri(url)
+                self.web_view[self.tabbook.get_current_page()-self.n].load_string(x[0], x[1], x[2], x[3])
+                unique = 0
+            except:
+                unique = 0
+            nurl = url + "\n"
+            for h in self.history:
+                if nurl == h:
+                    unique = 1
+                if url == h:
+                    unique = 1
+                if unique == 0:
+                    self.history.append(url + "\n")
+                    try:
+                        self.historybox
+                        uri = url.rstrip()
+                        self.historyliststore.append([uri])
+                    except:
+                        uri = url.rstrip()
+            self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], "Loading...")
+            self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).set_tooltip_text("LOADING!")
+            self.window.set_title("Loading...")
+            self.back_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_back())
+            self.forward_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_forward())
 
     def set_tab_title(self, widget, data=None):
         if self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title() != None:
@@ -333,6 +372,9 @@ class Browser:
     def historytab(self, something=None, other=None, somethingelse=None, lol=None):
         self.n = self.n + 1
         self.historysearch = gtk.Entry()
+        histclosebutton = gtk.Button('X')
+        histclosebutton.connect("activate", self.removetab)
+        histclosebutton.connect("clicked", self.removetab)
         self.historysearch.connect("activate", self.search_history)
         historysearchbutton = gtk.Button('Search')
         historysearchbutton.connect("activate", self.search_history)
@@ -340,6 +382,7 @@ class Browser:
         historysearchbox = gtk.HBox(False, 0)
         historysearchbox.pack_start(self.historysearch, False, True, 0)
         historysearchbox.pack_start(historysearchbutton, False, True, 0)
+        historysearchbox.pack_end(histclosebutton, False, True, 0)
         self.historyliststore = gtk.ListStore(gobject.TYPE_STRING)
         for item in self.history:
             uri = item.rstrip()
@@ -359,6 +402,13 @@ class Browser:
         self.tabbook.set_tab_label_text(self.historybox, "History")
         self.tabbook.get_tab_label(self.historybox).set_tooltip_text("History")
         self.tabbook.set_current_page(0)
+        self.historylistview.connect("row-activated", self.openhistoryitem)
+
+    def openhistoryitem(self, treeview, path, view_column):
+        historyrow, historydata = self.historylistview.get_selection().get_selected()
+        historydata = historyrow.get_iter(path[0])
+        histurl = historyrow.get_value(historydata, 0)
+        self.addtab(None, None, None, None, histurl)
 
     def search_history(self, whatever=None, something=None, overboard=None):
         histres = []
