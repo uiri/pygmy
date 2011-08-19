@@ -18,7 +18,7 @@
 # Based off of GPL'd code snippet I found.
 # <http://www.eurion.net/python-snippets/snippet/Webkit%20Browser.html>
 
-import pygtk, gtk, webkit, gobject, feedparser, os, time, threading, urllib2, urllib
+import pygtk, gtk, webkit, gobject, feedparser, os, time, threading, urllib2, urllib, platform
 from operator import itemgetter
 
 class Browser:
@@ -50,7 +50,6 @@ class Browser:
 
     def __init__(self):
 
-        
         #gobject.threads_init()
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_resizable(True)
@@ -260,16 +259,35 @@ class Browser:
             url = "http://google.ca/search?q=" + url
         except:
             try:
-                url.index("://")
+                url.index("mailto")
+                try:
+                    platform.system().index("Win")
+                    os.system("start "+url)
+                except:
+                    try:
+                        platform.system().index("Dar")
+                        os.system("open "+url)
+                    except:
+                        try:
+                            platform.system().index("Lin")
+                            os.system("xdg-open "+url)
+                        except:
+                            print "Good on you for running this on an unsupported system. Sorry, this thing can't open mailto urls for you"
             except:
-                url = "http://"+url
+                try:
+                    url.index("://")
+                except:
+                    url = "http://"+url
         self.url_bar[self.tabbook.get_current_page()-self.n].set_text(url)
         try:
             url.index("https")
             r = self.open_uri(url)
-            self.web_view[self.tabbook.get_current_page()-self.n].load_string(x[0], x[1], x[2], x[3])
+            self.web_view[self.tabbook.get_current_page()-self.n].load_string(r[0], r[1], r[2], r[3])
         except:
-            self.web_view[self.tabbook.get_current_page()-self.n].open(url)
+            try:
+                url.index("mailto")
+            except:
+                self.web_view[self.tabbook.get_current_page()-self.n].open(url)
 
     def go_back(self, widget, data=None, other=None, etc=None):
         '''Webkit will remember the links and this will allow us to go
