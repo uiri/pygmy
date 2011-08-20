@@ -53,6 +53,12 @@ class Browser:
                     a = str(a[0] + ": " + a[1])
                     self.historyfile.writelines(a)
                 self.historyfile.close()
+        else:
+                self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
+                for a in self.history:
+                    a = str(a[0] + ": " + a[1])
+                    self.historyfile.writelines(a)
+                self.historyfile.close()
         gtk.main_quit()
 
     def __init__(self):
@@ -107,7 +113,7 @@ class Browser:
         self.kbd_shortcuts(self.tabbook)
 
         if self.preferences != None:
-            if self.preferences[3] == '1': 
+            if self.preferences[3] != '1': 
                 if not os.path.exists(os.path.expanduser("~/pyg/history")):
                     self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
                     self.historyfile.write("http://www.google.com")
@@ -350,34 +356,30 @@ class Browser:
            button.'''
         url = widget.get_main_frame().get_uri()
         self.url_bar[self.tabbook.get_current_page()-self.n].set_text(url)
-        if self.window.get_title() != "Loading...":
-            try:
-                url.index("https")
-                r = self.open_uri(url)
-                self.web_view[self.tabbook.get_current_page()-self.n].load_string(x[0], x[1], x[2], x[3])
-                unique = 0
-            except:
-                unique = 0
-            nurl = url + "\n"
-            for h in self.history:
-                if nurl == h[1]:
-                    unique = 1
-                if url == h[1]:
-                    unique = 1
-                if unique == 0:
-                    self.change_title = 1
-                    self.history.append(["Loading...", url + "\n"])
-                    try:
-                        self.historybox
-                        uri = url.rstrip()
-                        self.historyliststore.append([self.history[len(self.history)-1][0], uri])
-                    except:
-                        uri = url.rstrip()
-            self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], "Loading...")
-            self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).set_tooltip_text("LOADING!")
-            self.window.set_title("Loading...")
-            self.back_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_back())
-            self.forward_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_forward())
+        nurl = url + "\n"
+        for h in self.history:
+            print "what the fuck indeed"
+            if nurl == h[1]:
+                unique = 1
+                print "not unique"
+            if url == h[1]:
+                unique = 1
+                print "not unique"
+            if unique == 0:
+                self.change_title = 1
+                self.history.append(["Loading...", url + "\n"])
+                print "history append"
+                try:
+                    self.historybox
+                    uri = url.rstrip()
+                    self.historyliststore.append([self.history[len(self.history)-1][0], uri])
+                except:
+                    uri = url.rstrip()
+        self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], "Loading...")
+        self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).set_tooltip_text("LOADING!")
+        self.window.set_title("Loading...")
+        self.back_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_back())
+        self.forward_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_forward())
 
     def set_tab_title(self, widget, data=None):
         if self.preferences != None:
@@ -605,7 +607,7 @@ class Browser:
                 self.leftbutton.set_active(True)
             self.homeentry.set_text(self.preferences[1])
             if self.preferences[2] != '0':
-               self.rssbutton.get_active()
+               self.rssbutton.set_active(True)
             if self.preferences[3] == '0':
                 self.histbutton.set_active(True)
             self.widthbutton.set_value(float(self.preferences[4]))
