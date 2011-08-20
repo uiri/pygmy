@@ -35,76 +35,65 @@ class Browser:
     vbox = []
     url_bar = []
     history = []
-    n = 1
+    n = 0
     change_title = 0
 
     def delete_event(self, widget, event, data=None):
         return False
 
     def destroy(self, widget, data=None):
-        if self.preferences != None:
-            prefsfile = open(os.path.expanduser("~/pyg/prefs"), 'w')
-            for pref in self.preferences:
-                pref = pref + "\n"
-                prefsfile.writelines(pref)
-            if self.preferences[3] != '1':
-                self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
-                for a in self.history:
-                    a = str(a[0] + ": " + a[1])
-                    self.historyfile.writelines(a)
-                self.historyfile.close()
-        else:
-                self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
-                for a in self.history:
-                    a = str(a[0] + ": " + a[1])
-                    self.historyfile.writelines(a)
-                self.historyfile.close()
+        self.prefsfile = open(os.path.expanduser("~/pyg/prefs"), 'w')
+        for p in self.preferences:
+            p = str(p) + "\n"
+            self.prefsfile.writelines(p)
+        self.prefsfile.close()
+        self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
+        for a in self.history:
+            a = str(a[0] + ": " + a[1])
+            self.historyfile.writelines(a)
+        self.historyfile.close()
         gtk.main_quit()
 
     def __init__(self):
-        if os.path.exists(os.path.expanduser("~/pyg/prefs")):
-            prefsfile = open(os.path.expanduser("~/pyg/prefs"), 'r')
-            tmppref = prefsfile.readlines()
-            self.preferences = []
-            prefsfile.close()
-            for pref in tmppref:
-                self.preferences.append(pref.rstrip())
-        else:
-            self.preferences = None
+        if not os.path.exists(os.path.expanduser("~/pyg")):
+            os.mkdir(os.path.expanduser("~/pyg"))
+        if not os.path.exists(os.path.expanduser("~/pyg/prefs")):
+            self.prefsfile = open(os.path.expanduser("~/pyg/prefs"), 'w')
+            self.prefsfile.write("1\nhttp://google.com/\n0\n1\n15\n")
+            self.prefsfile.close()
+        prefsfile = open(os.path.expanduser("~/pyg/prefs"), 'r')
+        tmppref = prefsfile.readlines()
+        self.preferences = []
+        prefsfile.close()
+        for pref in tmppref:
+            self.preferences.append(pref.rstrip())
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_resizable(True)
         self.window.set_title("Pygmy Web")
         self.window.connect("delete_event", self.delete_event)
         self.window.connect("destroy", self.destroy)
-        self.window.set_default_size(800,600)
+        self.window.set_default_size(600,600)
         self.tabbook = gtk.Notebook()
         self.tabbook.set_scrollable(True)
         self.tabbook.popup_enable()
-        if self.preferences != None:
-            if self.preferences[1] == '0':
-                self.preferences[1] = "http://google.com/"
-            if self.preferences[0] == '1':
-                self.tabbook.set_tab_pos(gtk.POS_LEFT)
-            elif self.preferences[0] == '2':
-                self.tabbook.set_tab_pos(gtk.POS_TOP)
-            elif self.preferences[0] == '3':
-                self.tabbook.set_tab_pos(gtk.POS_RIGHT)
-            elif self.preferences[0] == '4':
-                self.tabbook.set_tab_pos(gtk.POS_BOTTOM)
-            else:
-                self.tabbook.set_tab_pos(gtk.POS_LEFT)
-            self.addtab(openurl=self.preferences[1])
-            if self.preferences[2] == '1':
-                self.rssreader()
-                self.t = threading.Thread(target=self.ping_rss)
-                self.t.daemon = True
-                self.t.start()
-            else:
-                self.n = self.n - 1
+        if self.preferences[1] == '0':
+            self.preferences[1] = "http://google.com/"
+        if self.preferences[0] == '1':
+            self.tabbook.set_tab_pos(gtk.POS_LEFT)
+        elif self.preferences[0] == '2':
+            self.tabbook.set_tab_pos(gtk.POS_TOP)
+        elif self.preferences[0] == '3':
+            self.tabbook.set_tab_pos(gtk.POS_RIGHT)
+        elif self.preferences[0] == '4':
+            self.tabbook.set_tab_pos(gtk.POS_BOTTOM)
         else:
             self.tabbook.set_tab_pos(gtk.POS_LEFT)
-            self.addtab()
-            self.n = self.n - 1
+        self.addtab(openurl=self.preferences[1])
+        if self.preferences[2] == '1':
+            self.rssreader()
+            self.t = threading.Thread(target=self.ping_rss)
+            self.t.daemon = True
+            self.t.start()
         self.mainbox.pack_start(self.tabbook, True, True, 0)
         self.tabbook.set_current_page(1)
         self.window.add(self.mainbox)
@@ -112,27 +101,28 @@ class Browser:
         self.tabbook.connect("switch_page", self.set_window_title)
         self.kbd_shortcuts(self.tabbook)
 
-        if self.preferences != None:
-            if self.preferences[3] != '1': 
-                if not os.path.exists(os.path.expanduser("~/pyg/history")):
-                    self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
-                    self.historyfile.write("http://www.google.com")
-                    self.historyfile.close()
-                self.historyfile = open(os.path.expanduser("~/pyg/history"), 'r')
-                self.historytemp = self.historyfile.readlines()
-                self.history = []
-                for a in self.historytemp:
-                    a = a.split(": ")
-                    self.history.append(a)
-                    while 1:
-                        try:
-                            self.history.remove('\n')
-                        except:
-                            break
-                self.historyfile.close()
+        #if self.preferences != None:
+        #    if self.preferences[3] != '1': 
+        if not os.path.exists(os.path.expanduser("~/pyg/history")):
+            self.historyfile = open(os.path.expanduser("~/pyg/history"), 'w')
+            self.historyfile.write("Google: http://www.google.com\n")
+            self.historyfile.close()
+        self.historyfile = open(os.path.expanduser("~/pyg/history"), 'r')
+        self.historytemp = self.historyfile.readlines()
+        self.history = []
+        for a in self.historytemp:
+            a = a.split(": ")
+            self.history.append(a)
+            while 1:
+                try:
+                    self.history.remove('\n')
+                except:
+                    break
+        self.historyfile.close()
 
     def rssreader(self):
         try:
+            self.n = self.n + 1
             rssfile = open(os.path.expanduser("~/pyg/feedlist"), 'r')
             rssstring = rssfile.read()
             self.rsslist = rssstring.split("\n")
@@ -177,8 +167,6 @@ class Browser:
             self.tabbook.show_all()
             self.rsslinkcb = 'lol'
         except:
-            if not os.path.exists(os.path.expanduser("~/pyg")):
-                os.mkdir(os.path.expanduser("~/pyg"))
             if not os.path.exists(os.path.expanduser("~/pyg/feedlist")):
                 rssfile = open(os.path.expanduser("~/pyg/feedlist"), "w")
                 rssfile.write("None")
@@ -219,27 +207,6 @@ class Browser:
                 if y == 0:
                     self.rssstore.append([title, x[0], x[1], x[2], x[3], x[4], x[5], x[6]])
             time.sleep(3300)
-
-    def open_uri(self, url):
-        request = urllib2.Request(url)
-        request.add_header('User-Agent', "Mozilla/5.0 AppleWebKit/531.2+ (KHTML, like Gecko) Pygmy/0.5.0 Safari/531.2+")
-        res = []
-        f = urllib2.urlopen(request)
-        res.append(f.read())
-        header = str(f.info())
-        print header
-        for s in header.split("\r\n"):
-            try:
-                s.index("Type")
-                x = s.split(";")
-                x[0] = x[0][14:]
-                x[1] = x[1][9:]
-                res.append(x[0])
-                res.append(x[1])
-            except:
-                s = s + "\r\n"
-        res.append(url[:url.find('/', 10)])
-        return res
 
     def addtab(self, widget=None, dummy=None, dummier=None, dummiest=None, openurl="http://google.com/"):
         self.web_view.append(webkit.WebView())
@@ -326,21 +293,16 @@ class Browser:
                     url = "http://"+url
         self.url_bar[self.tabbook.get_current_page()-self.n].set_text(url)
         try:
-            url.index("https")
-            r = self.open_uri(url)
-            self.web_view[self.tabbook.get_current_page()-self.n].load_string(r[0], r[1], r[2], r[3])
+            url.index("mailto")
         except:
-            try:
-                url.index("mailto")
-            except:
-                self.web_view[self.tabbook.get_current_page()-self.n].open(url)
+            self.web_view[self.tabbook.get_current_page()-self.n].open(url)
 
     def go_back(self, widget, data=None, other=None, etc=None):
         '''Webkit will remember the links and this will allow us to go
            backwards.'''
         self.web_view[self.tabbook.get_current_page()-self.n].go_back()
 
-    def go_forward(self, widget, data=None):
+    def go_forward(self, widget, data=None, other=None, etc=None):
         '''Webkit will remember the links and this will allow us to go
            forwards.'''
         self.web_view[self.tabbook.get_current_page()-self.n].go_forward()
@@ -354,69 +316,74 @@ class Browser:
            It then checks to see if we can go back, if we can it makes the
            back button clickable.  Then it does the same for the foward
            button.'''
-        url = widget.get_main_frame().get_uri()
-        self.url_bar[self.tabbook.get_current_page()-self.n].set_text(url)
-        nurl = url + "\n"
-        for h in self.history:
-            print "what the fuck indeed"
-            if nurl == h[1]:
-                unique = 1
-                print "not unique"
-            if url == h[1]:
-                unique = 1
-                print "not unique"
-            if unique == 0:
-                self.change_title = 1
-                self.history.append(["Loading...", url + "\n"])
-                print "history append"
-                try:
-                    self.historybox
-                    uri = url.rstrip()
-                    self.historyliststore.append([self.history[len(self.history)-1][0], uri])
-                except:
-                    uri = url.rstrip()
+        self.url = widget.get_main_frame().get_uri()
+        histthread = threading.Thread(target=self.addhistoryitem)
+        histthread.daemon = True
+        histthread.start()
+        self.url_bar[self.tabbook.get_current_page()-self.n].set_text(self.url)
         self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], "Loading...")
         self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).set_tooltip_text("LOADING!")
         self.window.set_title("Loading...")
         self.back_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_back())
         self.forward_button[self.tabbook.get_current_page()-self.n].set_sensitive(self.web_view[self.tabbook.get_current_page()-self.n].can_go_forward())
 
+    def addhistoryitem(self):
+        url = self.url
+        view = self.web_view[self.tabbook.get_current_page()-self.n]
+        time.sleep(10)
+        nurl = url + "\n"
+        unique = 0
+        for h in self.history:
+            if nurl == h[1]:
+                unique = 1
+            if url == h[1]:
+                unique = 1
+        if unique == 0:
+            self.history.append([view.get_main_frame().get_title(), url + "\n"])
+            try:
+                self.historybox
+                uri = url.rstrip()
+                self.historyliststore.append([self.history[len(self.history)-1][0], uri])
+            except:
+                uri = url.rstrip()
+
     def set_tab_title(self, widget, data=None):
-        if self.preferences != None:
-            maxlen = self.preferences[4]
-        else:
-            maxlen = '15'
+        #if self.preferences != None:
+        #   maxlen = self.preferences[4]
+        #else:
+        maxlen = '15'
         if self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title() != None:
-            if self.change_title == 1:
-                self.history[len(self.history)-1][0] = self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()
             real_title = self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()
-            if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()) > maxlen:
-                self.web_view[self.tabbook.get_current_page()-self.n].execute_script('document.title=document.title.substring(0,' + maxlen - 3 + ')+"...";')
+            if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title()) > int(maxlen):
+                newmaxlen = int(maxlen) - 3
+                script = 'document.title=document.title.substring(0,' + str(newmaxlen) + ') + "...";'
+                self.web_view[self.tabbook.get_current_page()-self.n].execute_script(script)
             self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_title())
             self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).set_tooltip_text(real_title)
             self.window.set_title(self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).get_text() + " - Pygmy Web")
         else:
-            maxlen = int(maxlen)
-            if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_uri()) > maxlen:
-                uri = self.web_view[self.tabbook.get_current_page()].get_main_frame().get_uri()[0:maxlen-3] + "..."
+            newmaxlen = int(maxlen) - 3
+            if len(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_uri()) > int(maxlen):
+                uri = self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_uri()[0:newmaxlen] + "..."
             else:
-                uri = self.web_view[self.tabbook.get_current_page()].get_main_frame().get_uri()
-            self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()], uri)
+                uri = self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_uri()
+            self.tabbook.set_tab_label_text(self.vbox[self.tabbook.get_current_page()-self.n], uri)
             self.tabbook.get_tab_label(self.vbox[self.tabbook.get_current_page()-self.n]).set_tooltip_text(self.web_view[self.tabbook.get_current_page()-self.n].get_main_frame().get_uri())
             self.window.set_title("Pygmy Web")
         self.change_title = 0
 
     def set_window_title(self, widget, weirdpointerthing, n):
-        try:
-            if self.tabbook.get_tab_label(self.vbox[n-1]) != None:
-                self.window.set_title(self.tabbook.get_tab_label(self.vbox[n-1]).get_text() + " - Pygmy Web")
+        if n-self.n >= 0:
+            if self.tabbook.get_tab_label(self.vbox[n-self.n]) != None:
+                self.window.set_title(self.tabbook.get_tab_label(self.vbox[n-self.n]).get_text() + " - Pygmy Web")
             else:
                 self.window.set_title("Pygmy Web")
-        except:
-            if self.tabbook.get_tab_label_text(self.tabbook.get_nth_page(self.tabbook.get_current_page())) != "Pygmy RSS":
+        else:
+            if self.tabbook.get_tab_label_text(self.tabbook.get_nth_page(n)) == "Pygmy RSS":
                 self.window.set_title("RSS Reader - Pygmy RSS")
-            if self.tabbook.get_tab_label_text(self.tabbook.get_nth_page(self.tabbook.get_current_page())) != "History":
+            if self.tabbook.get_tab_label_text(self.tabbook.get_nth_page(n)) == "History":
                 self.window.set_title("History - Pygmy Web")
+
 
     def removetab(self, widget=None, dummy=None, dummier=None, dummiest=None):
         if self.tabbook.get_current_page()-self.n >= 0:
@@ -493,7 +460,7 @@ class Browser:
     def openhistoryitem(self, treeview, path, view_column):
         historyrow, historydata = self.historylistview.get_selection().get_selected()
         historydata = historyrow.get_iter(path[0])
-        histurl = historyrow.get_value(historydata, 0)
+        histurl = historyrow.get_value(historydata, 1)
         self.addtab(None, None, None, None, histurl)
 
     def search_history(self, whatever=None, something=None, overboard=None):
