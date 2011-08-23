@@ -565,7 +565,7 @@ class Browser:
 
         if self.preferences != None:
             if self.preferences[0] == '4':
-                bottombutton.set_active(True)
+                self.bottombutton.set_active(True)
             elif self.preferences[0] == '2':
                 self.topbutton.set_active(True)
             elif self.preferences[0] =='3':
