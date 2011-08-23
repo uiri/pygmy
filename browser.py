@@ -54,19 +54,22 @@ class Browser:
         self.historyfile.close()
         gtk.main_quit()
 
-    def __init__(self):
+    def __init__(self, urlwhichshallbeopened=None):
         if not os.path.exists(os.path.expanduser("~/pyg")):
             os.mkdir(os.path.expanduser("~/pyg"))
         if not os.path.exists(os.path.expanduser("~/pyg/prefs")):
             self.prefsfile = open(os.path.expanduser("~/pyg/prefs"), 'w')
             self.prefsfile.write("1\nhttp://google.com/\n0\n1\n15\n")
             self.prefsfile.close()
-        prefsfile = open(os.path.expanduser("~/pyg/prefs"), 'r')
-        tmppref = prefsfile.readlines()
-        self.preferences = []
-        prefsfile.close()
-        for pref in tmppref:
-            self.preferences.append(pref.rstrip())
+        if urlwhichshallbeopened != None:
+            self.preferences = [None, None, None, None, None]
+        else:
+            prefsfile = open(os.path.expanduser("~/pyg/prefs"), 'r')
+            tmppref = prefsfile.readlines()
+            self.preferences = []
+            prefsfile.close()
+            for pref in tmppref:
+                self.preferences.append(pref.rstrip())
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_resizable(True)
         self.window.set_title("Pygmy Web")
@@ -88,7 +91,10 @@ class Browser:
             self.tabbook.set_tab_pos(gtk.POS_BOTTOM)
         else:
             self.tabbook.set_tab_pos(gtk.POS_LEFT)
-        self.addtab(openurl=self.preferences[1])
+        if urlwhichshallbeopened != None:
+            self.addtab(openurl=urlwhichshallbeopened)
+        else:
+            self.addtab(openurl=self.preferences[1])
         if self.preferences[2] == '1':
             self.rssreader()
             self.t = threading.Thread(target=self.ping_rss)
